@@ -3,7 +3,7 @@
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\AuthController; // Use statement for AuthController
-use App\Http\Controllers\API\AiraloController;
+use App\Http\Controllers\Api\AiraloController;
 /*
 |--------------------------------------------------------------------------
 | API Routes

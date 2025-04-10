@@ -2,8 +2,8 @@
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\Api\AuthController; // Make sure this line is present
-
+use App\Http\Controllers\Api\AuthController; // Use statement for AuthController
+use App\Http\Controllers\API\AiraloController;
 /*
 |--------------------------------------------------------------------------
 | API Routes
@@ -23,21 +23,30 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 // --- Custom Authentication Routes ---
 
 // Public routes for authentication
-Route::post('/register', [AuthController::class, 'register'])->name('api.register'); // Added name for potential future use
-Route::post('/login', [AuthController::class, 'login'])->name('api.login');       // Added name
+Route::post('/register', [AuthController::class, 'register'])->name('api.register');
+Route::post('/login', [AuthController::class, 'login'])->name('api.login');
 
 // Protected routes (require authentication via Sanctum)
 Route::middleware('auth:sanctum')->group(function () {
     // Logout route
-    Route::post('/logout', [AuthController::class, 'logout'])->name('api.logout'); // Added name
+    Route::post('/logout', [AuthController::class, 'logout'])->name('api.logout');
 
     // You can add other authenticated routes here later, for example:
     // Route::get('/profile', [ProfileController::class, 'show']);
 });
 
 // --- Other API routes for your application will go here ---
-// Example:
-// Route::get('/packages', [PackageController::class, 'index']);
-// Route::get('/packages/{package}', [PackageController::class, 'show']);
-// Route::middleware('auth:sanctum')->post('/orders', [OrderController::class, 'store']);
+
+Route::get('/airalo/packages', [AiraloController::class, 'listPackages']);
+Route::post('/airalo/orders', [AiraloController::class, 'createOrder']);
+Route::get('/airalo/countries-from-packages', [AiraloController::class, 'listCountriesFromPackages']);
+
+// Example for showing a single package (implement later)
+// Route::get('/packages/{package}', [PackageController::class, 'show'])->name('api.packages.show');
+
+// Example for placing an order (would likely require authentication)
+// Route::middleware('auth:sanctum')->post('/orders', [OrderController::class, 'store'])->name('api.orders.store');
+
+
+// --- Add Admin routes here later ---
 

@@ -4,8 +4,44 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "85c1d2065f70e38b0d6bf66559fb13c5",
+    "content-hash": "acc656070d4888e930877f1c0c315986",
     "packages": [
+        {
+            "name": "airalo/sdk",
+            "version": "1.1.12",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/Airalo/airalo-php-sdk.git",
+                "reference": "efed07b09ee4301eb5e9c020e63358aa183038cf"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/Airalo/airalo-php-sdk/zipball/efed07b09ee4301eb5e9c020e63358aa183038cf",
+                "reference": "efed07b09ee4301eb5e9c020e63358aa183038cf",
+                "shasum": ""
+            },
+            "require": {
+                "php": ">=7.4"
+            },
+            "require-dev": {
+                "phpstan/phpstan": "^1.10",
+                "phpunit/phpunit": "9.5"
+            },
+            "type": "project",
+            "autoload": {
+                "psr-4": {
+                    "Airalo\\": "src/",
+                    "Airalo\\Tests\\": "tests/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "description": "Airalo's Partner API PHP SDK",
+            "support": {
+                "issues": "https://github.com/Airalo/airalo-php-sdk/issues",
+                "source": "https://github.com/Airalo/airalo-php-sdk/tree/1.1.12"
+            },
+            "time": "2025-03-25T12:58:40+00:00"
+        },
         {
             "name": "brick/math",
             "version": "0.12.3",

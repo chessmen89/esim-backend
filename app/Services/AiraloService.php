@@ -103,46 +103,46 @@ class AiraloService
     }
 
     /**
-     * Retrieve available eSIM packages from the Airalo API.
-     *
-     * You can optionally pass an array of query parameters (e.g., for filtering or pagination).
-     *
-     * @param array $queryParams Optional query parameters.
-     * @return array|null
-     */
-    public function getPackages(array $queryParams = []): ?array
-    {
-        $endpoint = $this->baseUrl . '/packages';
+ * Retrieve available eSIM packages from the Airalo API.
+ *
+ * Optionally pass an array of query parameters (e.g., for filtering or pagination).
+ *
+ * @param array $queryParams Optional query parameters.
+ * @return array|null
+ */
+public function getPackages(array $queryParams = []): ?array
+{
+    $endpoint = $this->baseUrl . '/packages';
 
-        // Retrieve the access token.
-        $accessToken = $this->getAccessToken();
-        if (!$accessToken) {
-            Log::error("Unable to obtain access token in getPackages.");
-            return null;
-        }
-
-        try {
-            $response = Http::withHeaders([
-                'Authorization' => 'Bearer ' . $accessToken,
-                'Accept'        => 'application/json',
-            ])->get($endpoint, $queryParams);
-
-            if ($response->successful()) {
-                $json = $response->json();
-                // If the API returns a JSON structure with a top-level "data" key, use that.
-                return $json['data'] ?? $json;
-            }
-
-            Log::error('Airalo API error in getPackages', [
-                'status'   => $response->status(),
-                'response' => $response->body(),
-            ]);
-            return null;
-        } catch (\Exception $e) {
-            Log::error('Exception in getPackages: ' . $e->getMessage());
-            return null;
-        }
+    // Retrieve the access token.
+    $accessToken = $this->getAccessToken();
+    if (!$accessToken) {
+        Log::error("Unable to obtain access token in getPackages.");
+        return null;
     }
+
+    try {
+        $response = Http::withHeaders([
+            'Authorization' => 'Bearer ' . $accessToken,
+            'Accept'        => 'application/json',
+        ])->get($endpoint, $queryParams);
+
+        if ($response->successful()) {
+            $json = $response->json();
+            // If a top-level "data" key exists, use that; otherwise, return the full JSON.
+            return $json['data'] ?? $json;
+        }
+
+        Log::error('Airalo API error in getPackages', [
+            'status'   => $response->status(),
+            'response' => $response->body(),
+        ]);
+        return null;
+    } catch (\Exception $e) {
+        Log::error('Exception in getPackages: ' . $e->getMessage());
+        return null;
+    }
+}
 
     /**
      * Create a new eSIM order via the Airalo API.

@@ -41,6 +41,10 @@ Route::get('/airalo/packages', [AiraloController::class, 'listPackages']);
 Route::post('/airalo/orders', [AiraloController::class, 'createOrder']);
 Route::get('/airalo/countries-from-packages', [AiraloController::class, 'listCountriesFromPackages']);
 
+// New route: Pass both type and country as URL parameters.
+// For example, a GET request to: /api/airalo/packages/local/TR
+Route::get('/airalo/packages/{type}/{country}', [AiraloController::class, 'listPackagesByTypeAndCountry']);
+
 // Example for showing a single package (implement later)
 // Route::get('/packages/{package}', [PackageController::class, 'show'])->name('api.packages.show');
 

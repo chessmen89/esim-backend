@@ -69,4 +69,34 @@ class AiraloController extends Controller
 
         return response()->json($countries);
     }
+    /**
+ * Retrieve packages filtered by type and country.
+ *
+ * @param string $type    The package type (e.g., "local", "global").
+ * @param string $country The country code (e.g., "TR", "US").
+ * @return \Illuminate\Http\JsonResponse
+ */
+public function listPackagesByTypeAndCountry(string $type, string $country)
+{
+    // Build query parameters using the provided type and country.
+    $queryParams = [
+        'filter[type]'    => $type,
+        'filter[country]' => strtoupper($country)  // Ensure country code is uppercase.
+    ];
+
+    $packages = $this->airaloService->getPackages($queryParams);
+
+    if (is_null($packages)) {
+        return response()->json([
+            'status'  => 'error',
+            'message' => "Unable to fetch packages for type: {$type} and country: {$country}"
+        ], 500);
+    }
+
+    return response()->json([
+        'status'  => 'success',
+        'message' => "Packages for type {$type} and country {$country} retrieved successfully.",
+        'data'    => $packages
+    ]);
+}
 }

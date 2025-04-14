@@ -2,55 +2,38 @@
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\Api\AuthController; // Use statement for AuthController
+use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\AiraloController;
+use App\Http\Controllers\OrderController;
+use App\Http\Controllers\PaymentWebhookController;
+
 /*
 |--------------------------------------------------------------------------
 | API Routes
 |--------------------------------------------------------------------------
 |
-| Here is where you can register API routes for your application. These
-| routes are loaded by the RouteServiceProvider and all of them will
-| be assigned to the "api" middleware group. Make something great!
+| هنا يمكنك تسجيل مسارات API الخاصة بتطبيقك.
+| يتم تحميل هذه المسارات بواسطة RouteServiceProvider وتعيينها ضمن مجموعة "api".
 |
 */
 
-// --- Default Laravel API Route (for authenticated users) ---
-Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
-    return $request->user();
-});
-
-// --- Custom Authentication Routes ---
-
-// Public routes for authentication
+// نقاط النهاية العامة أو غير المحمية
 Route::post('/register', [AuthController::class, 'register'])->name('api.register');
 Route::post('/login', [AuthController::class, 'login'])->name('api.login');
 
-// Protected routes (require authentication via Sanctum)
-Route::middleware('auth:sanctum')->group(function () {
-    // Logout route
-    Route::post('/logout', [AuthController::class, 'logout'])->name('api.logout');
-
-    // You can add other authenticated routes here later, for example:
-    // Route::get('/profile', [ProfileController::class, 'show']);
-});
-
-// --- Other API routes for your application will go here ---
-
+// نقاط النهاية الخاصة بـ Airalo (إذا كانت تريده أن تكون عامة أو يمكن حمايتها لاحقاً)
 Route::get('/airalo/packages', [AiraloController::class, 'listPackages']);
 Route::post('/airalo/orders', [AiraloController::class, 'createOrder']);
 Route::get('/airalo/countries-from-packages', [AiraloController::class, 'listCountriesFromPackages']);
-
-// New route: Pass both type and country as URL parameters.
-// For example, a GET request to: /api/airalo/packages/local/TR
 Route::get('/airalo/packages/{type}/{country}', [AiraloController::class, 'listPackagesByTypeAndCountry']);
 
-// Example for showing a single package (implement later)
-// Route::get('/packages/{package}', [PackageController::class, 'show'])->name('api.packages.show');
+// نقطة النهاية الخاصة بـ Payment Webhook (يفضل تأمينها بمفتاح أو توقيع مشترك)
+Route::post('/payment/webhook', [PaymentWebhookController::class, 'handlePaymentCallback']);
 
-// Example for placing an order (would likely require authentication)
-// Route::middleware('auth:sanctum')->post('/orders', [OrderController::class, 'store'])->name('api.orders.store');
-
-
-// --- Add Admin routes here later ---
+// نقاط النهاية المحمية (التي تتطلب مصادقة مستخدم) مع استخدام middleware "auth:sanctum"
+Route::middleware('auth:sanctum')->group(function () {
+    Route::post('/orders', [OrderController::class, 'store'])->name('orders.store');
+    Route::get('/orders', [OrderController::class, 'index'])->name('orders.index');
+    Route::get('/orders/{id}', [OrderController::class, 'show'])->name('orders.show');
+});
 

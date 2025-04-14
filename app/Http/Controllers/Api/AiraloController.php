@@ -38,21 +38,38 @@ class AiraloController extends Controller
      * @return \Illuminate\Http\JsonResponse
      */
     public function createOrder(Request $request)
-    {
-        $validatedData = $request->validate([
-            'package_id' => 'required|string',
-            'user_id'    => 'required|integer',
-            // Add additional validation rules as needed.
-        ]);
+{
+    // This will work whether the client sends JSON or form data.
+    $validatedData = $request->validate([
+        'quantity'            => 'required|integer|min:1|max:50',
+        'package_id'          => 'required|string',
+        'type'                => 'nullable|string',
+        'description'         => 'nullable|string',
+        'brand_settings_name' => 'nullable|string',
+    ]);
 
-        $order = $this->airaloService->createOrder($validatedData);
-
-        if (is_null($order)) {
-            return response()->json(['error' => 'Unable to create order via Airalo'], 500);
-        }
-
-        return response()->json($order);
+    // If 'type' is not provided, default to "sim"
+    if (empty($validatedData['type'])) {
+        $validatedData['type'] = 'sim';
     }
+
+    // Call Airalo API to create the order using our service
+    $order = $this->airaloService->createOrder($validatedData);
+
+    if (is_null($order)) {
+        return response()->json([
+            'status'  => 'error',
+            'message' => 'Unable to create order via Airalo'
+        ], 500);
+    }
+
+    return response()->json([
+        'status'  => 'success',
+        'message' => 'Order created successfully.',
+        'data'    => $order,
+    ]);
+}
+
 
     /**
      * Retrieve a unique list of countries extracted from the packages.

@@ -6,6 +6,8 @@ use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\AiraloController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\PaymentWebhookController;
+use App\Http\Controllers\TripController;
+
 
 /*
 |--------------------------------------------------------------------------
@@ -38,4 +40,22 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/orders', [OrderController::class, 'index'])->name('orders.index');
     Route::get('/orders/{id}', [OrderController::class, 'show'])->name('orders.show');
 });
+
+// نقاط النهاية الخاصة بالرحلات (trips)
+// يمكنك حماية نقاط النهاية حسب الحاجة، مثلاً عبر auth:sanctum إذا أردت أن يكون الإنشاء محدوداً للمشرفين
+Route::middleware('auth:sanctum')->group(function () {
+    Route::get('/user', function (Request $request) {
+        return $request->user();
+    });
+
+    // نقطة النهاية لإنشاء باقة جديدة
+    Route::post('/trips', [TripController::class, 'store'])->name('trips.store');
+   
+});
+ // نقطة النهاية لاسترجاع جميع الرحلات
+ Route::get('/trips', [TripController::class, 'index'])->name('trips.index');
+ // نقطة النهاية لاسترجاع الرحلات حسب كود الدولة
+ Route::get('/trips/country/{country_code}', [TripController::class, 'tripsByCountry'])->name('trips.byCountry');
+ // نقطة النهاية لاسترجاع رحلة برقم الـ ID
+ Route::get('/trips/{id}', [TripController::class, 'show'])->name('trips.show');
 

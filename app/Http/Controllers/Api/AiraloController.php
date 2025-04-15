@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Services\AiraloService;
 
+
 class AiraloController extends Controller
 {
     protected AiraloService $airaloService;
@@ -71,6 +72,7 @@ class AiraloController extends Controller
 }
 
 
+
     /**
      * Retrieve a unique list of countries extracted from the packages.
      *
@@ -86,6 +88,30 @@ class AiraloController extends Controller
 
         return response()->json($countries);
     }
+
+    public function listGlobalPackages()
+{
+    // بناء معايير البحث الخاصة بالباقة العالمية
+    $queryParams = [
+        'filter[type]' => 'global'
+    ];
+
+    // استدعاء الدالة getPackages من خدمة Airalo وتمرير معايير البحث
+    $packages = $this->airaloService->getPackages($queryParams);
+
+    if (is_null($packages)) {
+        return response()->json([
+            'status'  => 'error',
+            'message' => 'تعذر جلب الباقات العالمية من Airalo'
+        ], 500);
+    }
+
+    return response()->json([
+        'status'  => 'success',
+        'message' => 'تم استرجاع الباقات العالمية بنجاح',
+        'data'    => $packages
+    ]);
+}
     /**
  * Retrieve packages filtered by type and country.
  *

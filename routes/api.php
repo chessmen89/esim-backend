@@ -26,6 +26,7 @@ Route::get('/airalo/packages', [AiraloController::class, 'listPackages']);
 Route::post('/airalo/orders', [AiraloController::class, 'createOrder']);
 Route::get('/airalo/countries-from-packages', [AiraloController::class, 'listCountriesFromPackages']);
 Route::get('/airalo/packages/{type}/{country}', [AiraloController::class, 'listPackagesByTypeAndCountry']);
+Route::get('/airalo/packages/global', [AiraloController::class, 'listGlobalPackages']);
 
 // نقطة النهاية الخاصة بـ Payment Webhook (يفضل تأمينها بمفتاح أو توقيع مشترك)
 Route::post('/payment/webhook', [PaymentWebhookController::class, 'handlePaymentCallback']);

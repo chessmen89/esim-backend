@@ -6,7 +6,6 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Services\AiraloService;
 
-
 class AiraloController extends Controller
 {
     protected AiraloService $airaloService;
@@ -18,6 +17,8 @@ class AiraloController extends Controller
 
     /**
      * Retrieve available eSIM packages from Airalo.
+     *
+     * GET endpoint (for non-filtered access)
      *
      * @return \Illuminate\Http\JsonResponse
      */
@@ -39,39 +40,37 @@ class AiraloController extends Controller
      * @return \Illuminate\Http\JsonResponse
      */
     public function createOrder(Request $request)
-{
-    // This will work whether the client sends JSON or form data.
-    $validatedData = $request->validate([
-        'quantity'            => 'required|integer|min:1|max:50',
-        'package_id'          => 'required|string',
-        'type'                => 'nullable|string',
-        'description'         => 'nullable|string',
-        'brand_settings_name' => 'nullable|string',
-    ]);
+    {
+        // This will work whether the client sends JSON or form data.
+        $validatedData = $request->validate([
+            'quantity'            => 'required|integer|min:1|max:50',
+            'package_id'          => 'required|string',
+            'type'                => 'nullable|string',
+            'description'         => 'nullable|string',
+            'brand_settings_name' => 'nullable|string',
+        ]);
 
-    // If 'type' is not provided, default to "sim"
-    if (empty($validatedData['type'])) {
-        $validatedData['type'] = 'sim';
-    }
+        // If 'type' is not provided, default to "sim"
+        if (empty($validatedData['type'])) {
+            $validatedData['type'] = 'sim';
+        }
 
-    // Call Airalo API to create the order using our service
-    $order = $this->airaloService->createOrder($validatedData);
+        // Call Airalo API to create the order using our service.
+        $order = $this->airaloService->createOrder($validatedData);
 
-    if (is_null($order)) {
+        if (is_null($order)) {
+            return response()->json([
+                'status'  => 'error',
+                'message' => 'Unable to create order via Airalo'
+            ], 500);
+        }
+
         return response()->json([
-            'status'  => 'error',
-            'message' => 'Unable to create order via Airalo'
-        ], 500);
+            'status'  => 'success',
+            'message' => 'Order created successfully.',
+            'data'    => $order,
+        ]);
     }
-
-    return response()->json([
-        'status'  => 'success',
-        'message' => 'Order created successfully.',
-        'data'    => $order,
-    ]);
-}
-
-
 
     /**
      * Retrieve a unique list of countries extracted from the packages.
@@ -89,88 +88,126 @@ class AiraloController extends Controller
         return response()->json($countries);
     }
 
-    public function listGlobalPackages()
-{
-    // بناء معايير البحث الخاصة بالباقة العالمية
-    $queryParams = [
-        'filter[type]' => 'global'
-    ];
-
-    // استدعاء الدالة getPackages من خدمة Airalo وتمرير معايير البحث
-    $packages = $this->airaloService->getPackages($queryParams);
-
-    if (is_null($packages)) {
-        return response()->json([
-            'status'  => 'error',
-            'message' => 'تعذر جلب الباقات العالمية من Airalo'
-        ], 500);
-    }
-
-    return response()->json([
-        'status'  => 'success',
-        'message' => 'تم استرجاع الباقات العالمية بنجاح',
-        'data'    => $packages
-    ]);
-}
-
-public function listRegions()
-{
-    // الحصول على الباقات العالمية
-    $globalPackages = $this->airaloService->getPackages([
-        'filter[type]' => 'global'
-    ]);
-
-    if (is_null($globalPackages)) {
-        return response()->json([
-            'status'  => 'error',
-            'message' => 'تعذر جلب الباقات العالمية من Airalo'
-        ], 500);
-    }
-
-    // استخلاص بيانات القارات: لكل عنصر نحتفظ فقط بالمفاتيح الأساسية المطلوبة.
-    $regions = array_map(function ($item) {
-        return [
-            'slug'         => $item['slug'] ?? null,
-            'country_code' => $item['country_code'] ?? '',
-            'title'        => $item['title'] ?? null,
-            'image'        => $item['image'] ?? null,
-        ];
-    }, $globalPackages);
-
-    return response()->json([
-        'status'  => 'success',
-        'message' => 'تم استرجاع القارات بنجاح',
-        'data'    => $regions
-    ], 200);
-}
     /**
- * Retrieve packages filtered by type and country.
- *
- * @param string $type    The package type (e.g., "local", "global").
- * @param string $country The country code (e.g., "TR", "US").
- * @return \Illuminate\Http\JsonResponse
- */
-public function listPackagesByTypeAndCountry(string $type, string $country)
-{
-    // Build query parameters using the provided type and country.
-    $queryParams = [
-        'filter[type]'    => $type,
-        'filter[country]' => strtoupper($country)  // Ensure country code is uppercase.
-    ];
+     * Retrieve global packages.
+     *
+     * This method calls getPackages() using a filter for "global" packages.
+     *
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function listGlobalPackages()
+    {
+        $queryParams = [
+            'filter[type]' => 'global'
+        ];
 
-    $packages = $this->airaloService->getPackages($queryParams);
+        $packages = $this->airaloService->getPackages($queryParams);
 
-    if (is_null($packages)) {
+        if (is_null($packages)) {
+            return response()->json([
+                'status'  => 'error',
+                'message' => 'تعذر جلب الباقات العالمية من Airalo'
+            ], 500);
+        }
+
         return response()->json([
-            'status'  => 'error',
-            'message' => "Unable to fetch packages for type: {$type} and country: {$country}"
-        ], 500);
+            'status'  => 'success',
+            'message' => 'تم استرجاع الباقات العالمية بنجاح',
+            'data'    => $packages
+        ]);
     }
 
-    return response()->json([
-        'status'  => 'success',
-        'message' => "Packages for type {$type} and country {$country} retrieved successfully.",
-        'data'    => $packages
-    ]);
-}
+    /**
+     * POST endpoint to retrieve packages for a given global region.
+     * 
+     * The client should send a JSON body with a "slug" parameter 
+     * (e.g., {"slug": "asia"}). This method retrieves global packages
+     * from Airalo and then filters the response by the provided slug.
+     *
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getPackagesByRegion(Request $request)
+    {
+        // Validate that 'slug' is provided in the body.
+        $request->validate([
+            'slug' => 'required|string'
+        ]);
+
+        $regionSlug = trim($request->input('slug'));
+
+        // Get global packages from Airalo using the "global" type filter.
+        $globalPackages = $this->airaloService->getPackages([
+            'filter[type]' => 'global'
+        ]);
+
+        if (is_null($globalPackages)) {
+            return response()->json([
+                'status'  => 'error',
+                'message' => 'تعذر جلب الباقات العالمية من Airalo'
+            ], 500);
+        }
+
+        $foundRegion = null;
+        // Search for the region by slug (case-insensitive).
+        foreach ($globalPackages as $region) {
+            if (isset($region['slug']) && strtolower(trim($region['slug'])) === strtolower($regionSlug)) {
+                $foundRegion = $region;
+                break;
+            }
+        }
+
+        if (!$foundRegion) {
+            return response()->json([
+                'status'  => 'error',
+                'message' => 'لم يتم العثور على قارة بهذا الاسم: ' . $regionSlug
+            ], 404);
+        }
+
+        // Merge all packages from the operators of the found region.
+        $packages = [];
+        if (isset($foundRegion['operators']) && is_array($foundRegion['operators'])) {
+            foreach ($foundRegion['operators'] as $operator) {
+                if (isset($operator['packages']) && is_array($operator['packages'])) {
+                    $packages = array_merge($packages, $operator['packages']);
+                }
+            }
+        }
+
+        return response()->json([
+            'status'  => 'success',
+            'message' => 'تم استرجاع الباقات لقارة ' . $regionSlug . ' بنجاح',
+            'data'    => $packages
+        ]);
+    }
+
+    /**
+     * Retrieve packages filtered by type and country.
+     *
+     * @param string $type    The package type (e.g., "local", "global").
+     * @param string $country The country code (e.g., "TR", "US").
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function listPackagesByTypeAndCountry(string $type, string $country)
+    {
+        $queryParams = [
+            'filter[type]'    => $type,
+            'filter[country]' => strtoupper($country)
+        ];
+
+        $packages = $this->airaloService->getPackages($queryParams);
+
+        if (is_null($packages)) {
+            return response()->json([
+                'status'  => 'error',
+                'message' => "Unable to fetch packages for type: {$type} and country: {$country}"
+            ], 500);
+        }
+
+        return response()->json([
+            'status'  => 'success',
+            'message' => "Packages for type {$type} and country {$country} retrieved successfully.",
+            'data'    => $packages
+        ]);
+    }
 }

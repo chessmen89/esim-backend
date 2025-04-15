@@ -22,6 +22,7 @@ use App\Http\Controllers\TripController;
 // نقاط النهاية العامة أو غير المحمية
 Route::post('/register', [AuthController::class, 'register'])->name('api.register');
 Route::post('/login', [AuthController::class, 'login'])->name('api.login');
+Route::middleware('auth:sanctum')->post('/logout', [AuthController::class, 'logout'])->name('api.logout');
 
 // نقاط النهاية الخاصة بـ Airalo (إذا كانت تريده أن تكون عامة أو يمكن حمايتها لاحقاً)
 Route::get('/airalo/packages', [AiraloController::class, 'listPackages']);

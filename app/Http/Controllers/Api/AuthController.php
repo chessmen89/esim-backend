@@ -78,45 +78,56 @@ class AuthController extends Controller
      * @return JsonResponse
      */
     public function login(Request $request): JsonResponse
-{
-    try {
-        $credentials = $request->only('email', 'password');
+    {
+        try {
+            // Validate incoming request data
+            $credentials = $request->validate([
+                'email' => 'required|string|email',
+                'password' => 'required|string',
+            ]);
 
-        $validator = Validator::make($credentials, [
-            'email' => 'required|string|email',
-            'password' => 'required|string',
-        ]);
+            // Attempt to authenticate the user
+            if (!Auth::attempt($credentials)) {
+                // Authentication failed
+                return response()->json([
+                    'message' => 'Invalid login credentials.',
+                ], 401); // HTTP 401 Unauthorized
+            }
 
-        if ($validator->fails()) {
+            // Authentication successful
+            // Laravel's Auth::attempt already handles finding the user
+            $user = Auth::user(); // Get the authenticated user instance
+
+            // Revoke any existing tokens (optional, forces single login per device type)
+            // $user->tokens()->delete();
+
+            // Create a new token
+            $token = $user->createToken('auth_token')->plainTextToken;
+
+            // Return successful response with user data and token
+            return response()->json([
+                'message' => 'Login successful!',
+                'access_token' => $token,
+                'token_type' => 'Bearer',
+                'user' => $user, // Return user data
+            ], 200); // HTTP 200 OK
+
+        } catch (ValidationException $e) {
+            // Return validation errors
             return response()->json([
                 'message' => 'Validation failed',
-                'errors' => $validator->errors(),
-            ], 422);
-        }
-
-        if (!Auth::attempt($credentials)) {
+                'errors' => $e->errors(),
+            ], 422); // HTTP 422 Unprocessable Entity
+        } catch (\Exception $e) {
+            // Handle other potential errors during login
+            Log::error('Login failed: '.$e->getMessage()); // Log the actual error
             return response()->json([
-                'message' => 'Invalid login credentials.',
-            ], 401);
+                'message' => 'Login failed. Please try again later.',
+                 // Optionally include error details in non-production environments
+                // 'error' => config('app.debug') ? $e->getMessage() : null,
+            ], 500); // HTTP 500 Internal Server Error
         }
-
-        $user = Auth::user();
-        $token = $user->createToken('auth_token')->plainTextToken;
-
-        return response()->json([
-            'message' => 'Login successful!',
-            'access_token' => $token,
-            'token_type' => 'Bearer',
-            'user' => $user,
-        ], 200);
-
-    } catch (\Exception $e) {
-        Log::error('Login failed: ' . $e->getMessage());
-        return response()->json([
-            'message' => 'Login failed. Please try again later.',
-        ], 500);
     }
-}
 
      /**
      * Log the user out (Invalidate the token).

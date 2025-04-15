@@ -210,4 +210,46 @@ class AiraloController extends Controller
             'data'    => $packages
         ]);
     }
+
+    /**
+ * استخراج القارات فقط من رد الباقات العالمية وإرجاعها.
+ *
+ * سيتم استخراج بيانات كل عنصر من الـ data بحيث نقوم بإرجاع:
+ * - slug
+ * - country_code
+ * - title
+ * - image
+ *
+ * @return \Illuminate\Http\JsonResponse
+ */
+public function listRegions()
+{
+    // استدعاء الدالة الخاصة بالباقات العالمية من خدمات Airalo
+    $globalResponse = $this->airaloService->getGlobalPackages();
+
+    // التأكد من صحة الرد وبنية البيانات
+    if (is_null($globalResponse) || !isset($globalResponse['data']) || !is_array($globalResponse['data'])) {
+        return response()->json([
+            'status'  => 'error',
+            'message' => 'تعذر جلب الباقات العالمية'
+        ], 500);
+    }
+
+    // استخراج القارات فقط باستخدام البيانات الأساسية لكل قارة
+    $regions = array_map(function ($region) {
+        return [
+            'slug'         => $region['slug'] ?? null,
+            'country_code' => $region['country_code'] ?? '',
+            'title'        => $region['title'] ?? null,
+            'image'        => $region['image'] ?? null,
+        ];
+    }, $globalResponse['data']);
+
+    return response()->json([
+        'status'  => 'success',
+        'message' => 'تم استرجاع القارات بنجاح',
+        'data'    => $regions
+    ], 200);
+}
+
 }

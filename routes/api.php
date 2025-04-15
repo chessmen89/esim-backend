@@ -23,6 +23,12 @@ use App\Http\Controllers\TripController;
 Route::post('/register', [AuthController::class, 'register'])->name('api.register');
 Route::post('/login', [AuthController::class, 'login'])->name('api.login');
 Route::middleware('auth:sanctum')->post('/logout', [AuthController::class, 'logout'])->name('api.logout');
+Route::middleware('auth:api')->get('/me', function (Request $request) {
+    return response()->json([
+        'status' => 'success',
+        'data'   => $request->user()
+    ]);
+});
 
 // نقاط النهاية الخاصة بـ Airalo (إذا كانت تريده أن تكون عامة أو يمكن حمايتها لاحقاً)
 Route::get('/airalo/packages', [AiraloController::class, 'listPackages']);
@@ -33,6 +39,7 @@ Route::get('/airalo/packages/global', [AiraloController::class, 'listGlobalPacka
 Route::get('/airalo/regions', [AiraloController::class, 'listRegions']);
 // New endpoint: Retrieve packages based on region slug
 Route::post('/airalo/packages/global', [AiraloController::class, 'getPackagesByRegion']);
+
 
 
 // نقطة النهاية الخاصة بـ Payment Webhook (يفضل تأمينها بمفتاح أو توقيع مشترك)

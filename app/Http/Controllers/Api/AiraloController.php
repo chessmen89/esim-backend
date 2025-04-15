@@ -112,6 +112,37 @@ class AiraloController extends Controller
         'data'    => $packages
     ]);
 }
+
+public function listRegions()
+{
+    // الحصول على الباقات العالمية
+    $globalPackages = $this->airaloService->getPackages([
+        'filter[type]' => 'global'
+    ]);
+
+    if (is_null($globalPackages)) {
+        return response()->json([
+            'status'  => 'error',
+            'message' => 'تعذر جلب الباقات العالمية من Airalo'
+        ], 500);
+    }
+
+    // استخلاص بيانات القارات: لكل عنصر نحتفظ فقط بالمفاتيح الأساسية المطلوبة.
+    $regions = array_map(function ($item) {
+        return [
+            'slug'         => $item['slug'] ?? null,
+            'country_code' => $item['country_code'] ?? '',
+            'title'        => $item['title'] ?? null,
+            'image'        => $item['image'] ?? null,
+        ];
+    }, $globalPackages);
+
+    return response()->json([
+        'status'  => 'success',
+        'message' => 'تم استرجاع القارات بنجاح',
+        'data'    => $regions
+    ], 200);
+}
     /**
  * Retrieve packages filtered by type and country.
  *

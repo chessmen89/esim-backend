@@ -18,5 +18,6 @@ class Trip extends Model
         'image_path',
         'country_code',
         'price',
+        'description',
     ];
 }

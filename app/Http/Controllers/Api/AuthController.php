@@ -28,9 +28,6 @@ class AuthController extends Controller
                 'name' => 'required|string|max:255',
                 'email' => 'required|string|email|max:255|unique:users', // Ensure email is unique
                 'password' => ['required', 'confirmed', Password::defaults()], // Use default strong password rules, requires password_confirmation field
-                'date_of_birth' => 'required|date|before_or_equal:today', // Ensure valid date
-                'mobile_number' => 'nullable|string|max:20', // Optional fields
-                'country' => 'nullable|string|max:100',
             ]);
 
             // Create the user
@@ -38,9 +35,6 @@ class AuthController extends Controller
                 'name' => $validatedData['name'],
                 'email' => $validatedData['email'],
                 'password' => Hash::make($validatedData['password']), // Hash the password
-                'date_of_birth' => $validatedData['date_of_birth'],
-                'mobile_number' => $validatedData['mobile_number'] ?? null,
-                'country' => $validatedData['country'] ?? null,
             ]);
 
             // Create a token for the new user (using Sanctum)

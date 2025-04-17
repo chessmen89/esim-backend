@@ -86,6 +86,7 @@ class TripController extends Controller
             'image_path'   => 'required|string',
             'country_code' => 'required|string|max:10',
             'price'        => 'required|numeric',
+            'description'  => 'required|string',
         ]);
 
         // إنشاء سجل الباقة في قاعدة البيانات

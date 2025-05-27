@@ -2,142 +2,79 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
-use App\Models\Order;
-use App\Services\AiraloService;
 use Illuminate\Support\Facades\Log;
+use App\Models\Order;
 
 class OrderController extends Controller
 {
-    protected AiraloService $airaloService;
-
-    public function __construct(AiraloService $airaloService)
-    {
-        $this->airaloService = $airaloService;
-    }
-
     /**
-     * تخزين طلب جديد.
-     *
-     * العملية:
-     * 1. التحقق من صحة البيانات المدخلة.
-     * 2. التأكد من وجود مستخدم مصادق عليه (من التوكن).
-     * 3. إنشاء سجل طلب محلي مبدئي في قاعدة البيانات بحالة "pending".
-     * 4. إرسال الطلب إلى Airalo API.
-     * 5. حال نجاح Airalo API: تحديث السجل المحلي مع بيانات Airalo وتغيير الحالة إلى "paid".
-     *    إن فشل Airalo API: تحديث السجل المحلي لحالة "failed".
-     * 6. إرجاع بيانات الطلب النهائي.
-     *
-     * @param Request $request
-     * @return \Illuminate\Http\JsonResponse
+     * POST  /api/orders
+     * Create a local "pending" order (no call to Airalo yet).
      */
     public function store(Request $request)
     {
-        // الخطوة الأولى: التحقق من وجود مستخدم مصادق عليه
+        // 1) Auth
         $user = $request->user();
-        if (!$user) {
-            Log::error("محاولة إنشاء طلب بدون توكن");
+        if (! $user) {
+            Log::error('Attempt to create order without auth');
             return response()->json([
                 'status'  => 'error',
-                'message' => 'غير مصرح: يرجى تسجيل الدخول.'
+                'message' => 'Unauthenticated.',
             ], 401);
         }
-        Log::info("المستخدم المصادق عليه:", ['user_id' => $user->id]);
 
-        // الخطوة الثانية: التحقق من صحة البيانات المُرسلة
-        $validatedData = $request->validate([
-            'quantity'            => 'required|integer|min:1|max:50',
-            'package_id'          => 'required|string',
-            'type'                => 'nullable|string',
-            'description'         => 'nullable|string',
-            'brand_settings_name' => 'nullable|string',
+        // 2) Validate
+        $data = $request->validate([
+            'package_id' => 'required|string',
+            'quantity'   => 'required|integer|min:1|max:50',
+            'type'       => 'nullable|string',
         ]);
-        if (empty($validatedData['type'])) {
-            $validatedData['type'] = 'sim';
-        }
-        
-        Log::info("بيانات الطلب المُحققة:", $validatedData);
+        $data['type'] = $data['type'] ?? 'sim';
 
-        // الخطوة الثالثة: إنشاء سجل طلب محلي مبدئي بحالة pending
-        try {
-            $localOrder = Order::create([
-                'user_id'         => $user->id,
-                'airalo_order_id' => null, // سيتم تحديثها لاحقاً
-                'order_data'      => null, // سيتم تحديثها بعد استجابة Airalo
-                'status'          => 'pending',
-            ]);
-            Log::info("تم إنشاء سجل الطلب المحلي بحالة pending", ['order_id' => $localOrder->id]);
-        } catch (\Exception $e) {
-            Log::error("خطأ أثناء إنشاء سجل الطلب المحلي: " . $e->getMessage());
-            return response()->json([
-                'status'  => 'error',
-                'message' => 'فشل إنشاء سجل الطلب المحلي.'
-            ], 500);
-        }
+        // 3) Determine amount (replace with your real pricing logic)
+        //    For example, if Airalo price is in USD and you convert at 0.30:
+        $airaloUsdPrice = 9.5; 
+        $kwdAmount      = round($airaloUsdPrice * 0.30, 3);
 
-        // الخطوة الرابعة: إرسال الطلب إلى Airalo API
-        $airaloResponse = $this->airaloService->createOrder($validatedData);
-        if (!$airaloResponse) {
-            $localOrder->status = 'failed';
-            $localOrder->save();
-            Log::error("فشل إنشاء الطلب عبر Airalo. تم تحديث حالة الطلب المحلي إلى failed.");
-            return response()->json([
-                'status'  => 'error',
-                'message' => 'تعذر إنشاء الطلب عبر Airalo.'
-            ], 500);
-        }
-        Log::info("تم استلام استجابة Airalo:", $airaloResponse);
-        Log::info("نوع استجابة Airalo:", ['type' => gettype($airaloResponse)]);
+      // 4) Create local pending order
+$order = Order::create([
+    'user_id'         => $user->id,
+    'package_id'      => $data['package_id'],
+    'quantity'        => $data['quantity'],
+    'type'            => $data['type'],
+    'status'          => 'pending',
+    'amount'          => $kwdAmount,
+    'currency'        => 'KWD',
+    'airalo_order_id' => null,
+    'order_data'      => null,
+]);
 
-        // إذا لم يكن airaloResponse مصفوفة، حاول تحويلها
-        if (!is_array($airaloResponse)) {
-            $converted = json_decode($airaloResponse, true);
-            if (json_last_error() === JSON_ERROR_NONE) {
-                $airaloResponse = $converted;
-                Log::info("تم تحويل استجابة Airalo إلى مصفوفة.");
-            } else {
-                Log::error("فشل تحويل استجابة Airalo إلى مصفوفة.");
-            }
-        }
+// ✅ Add reference_number and save again
+$order->reference_number = 'ORD-' . $order->id;
+$order->save();
 
-        // الخطوة الخامسة: تحديث السجل المحلي بناءً على استجابة Airalo وتغيير الحالة إلى paid
-        try {
-            $airaloOrderId = data_get($airaloResponse, 'data.data.id', null);
-\Log::info("Extracted Airalo Order ID:", ['airalo_order_id' => $airaloOrderId]);
-$localOrder->airalo_order_id = $airaloOrderId;
-
-            $localOrder->order_data = $airaloResponse;
-            $localOrder->status = 'paid'; // بما أننا نفترض الدفع افتراضيًا
-            $localOrder->save();
-            Log::info("تم تحديث سجل الطلب المحلي مع بيانات Airalo بنجاح", ['order' => $localOrder]);
-        } catch (\Exception $e) {
-            Log::error("خطأ أثناء تحديث سجل الطلب المحلي: " . $e->getMessage());
-            return response()->json([
-                'status'  => 'error',
-                'message' => 'فشل تحديث سجل الطلب المحلي.'
-            ], 500);
-        }
+        Log::info("Created local pending order", ['order_id' => $order->id]);
 
         return response()->json([
             'status'  => 'success',
-            'message' => 'Order created',
-            'data'    => $localOrder,
-        ]);
+            'message' => 'Order created, awaiting payment.',
+            'data'    => $order,
+        ], 201);
     }
 
     /**
-     * استرجاع جميع الطلبات للمستخدم المصادق عليه.
-     *
-     * @param Request $request
-     * @return \Illuminate\Http\JsonResponse
+     * GET  /api/orders
+     * List all orders for the authenticated user.
      */
     public function index(Request $request)
     {
         $user = $request->user();
-        if (!$user) {
+        if (! $user) {
             return response()->json([
                 'status'  => 'error',
-                'message' => 'غير مصرح: يرجى تسجيل الدخول.'
+                'message' => 'Unauthenticated.',
             ], 401);
         }
 
@@ -145,40 +82,37 @@ $localOrder->airalo_order_id = $airaloOrderId;
 
         return response()->json([
             'status'  => 'success',
-            'message' => 'تم استرجاع الطلبات بنجاح.',
+            'message' => 'Orders retrieved successfully.',
             'data'    => $orders,
-        ]);
+        ], 200);
     }
 
     /**
-     * استرجاع طلب محدد للمستخدم المصادق عليه.
-     *
-     * @param Request $request
-     * @param int $id
-     * @return \Illuminate\Http\JsonResponse
+     * GET  /api/orders/{id}
+     * Retrieve a single order by ID (must belong to you).
      */
-    public function show(Request $request, $id)
+    public function show(Request $request, int $id)
     {
         $user = $request->user();
-        if (!$user) {
+        if (! $user) {
             return response()->json([
                 'status'  => 'error',
-                'message' => 'غير مصرح: يرجى تسجيل الدخول.'
+                'message' => 'Unauthenticated.',
             ], 401);
         }
 
         $order = Order::find($id);
-        if (!$order || $order->user_id !== $user->id) {
+        if (! $order || $order->user_id !== $user->id) {
             return response()->json([
                 'status'  => 'error',
-                'message' => 'الطلب غير موجود أو الوصول غير مصرح به.'
+                'message' => 'Order not found or access denied.',
             ], 404);
         }
 
         return response()->json([
             'status'  => 'success',
-            'message' => 'تم استرجاع الطلب بنجاح.',
+            'message' => 'Order retrieved successfully.',
             'data'    => $order,
-        ]);
+        ], 200);
     }
 }

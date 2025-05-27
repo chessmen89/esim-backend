@@ -9,24 +9,20 @@ class Order extends Model
 {
     use HasFactory;
 
-    // Ensure these fields are fillable for mass assignment.
     protected $fillable = [
         'user_id',
+        'package_id',
+        'quantity',
+        'type',
+        'status',
+        'amount',
+        'currency',
         'airalo_order_id',
         'order_data',
-        'status',
     ];
 
-    // Cast order_data to array (so JSON is decoded automatically).
     protected $casts = [
         'order_data' => 'array',
+        'amount'     => 'decimal:3',
     ];
-
-    public function user()
-    {
-        return $this->belongsTo(User::class);
-    }
-
-    protected $table = 'orders';
-
 }

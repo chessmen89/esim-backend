@@ -7,7 +7,7 @@ use App\Http\Controllers\Api\AiraloController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\PaymentWebhookController;
 use App\Http\Controllers\TripController;
-
+use App\Http\Controllers\Api\PaymentController;
 
 /*
 |--------------------------------------------------------------------------
@@ -42,9 +42,6 @@ Route::post('/airalo/packages/global', [AiraloController::class, 'getPackagesByR
 
 
 
-// نقطة النهاية الخاصة بـ Payment Webhook (يفضل تأمينها بمفتاح أو توقيع مشترك)
-Route::post('/payment/webhook', [PaymentWebhookController::class, 'handlePaymentCallback']);
-
 // نقاط النهاية المحمية (التي تتطلب مصادقة مستخدم) مع استخدام middleware "auth:sanctum"
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/orders', [OrderController::class, 'store'])->name('orders.store');
@@ -70,3 +67,23 @@ Route::middleware('auth:sanctum')->group(function () {
  // نقطة النهاية لاسترجاع رحلة برقم الـ ID
  Route::get('/trips/{id}', [TripController::class, 'show'])->name('trips.show');
 
+
+
+Route::middleware('auth:sanctum')
+      ->post('/payment/checkout', [PaymentController::class, 'checkout'])
+      ->name('payment.checkout');
+
+Route::post('/payment/verify', [PaymentController::class, 'callback'])
+     ->name('payment.verify');
+
+Route::match(['get','post'], 'payment/verify', [PaymentController::class, 'verify'])
+     ->name('payment.verify');
+
+Route::post('payment/failure',  [PaymentController::class, 'failure'])
+     ->name('payment.failure');
+
+Route::match(['get','post'], '/payment/callback', [PaymentController::class,'callback'])
+     ->name('hesabe.callback');
+     
+Route::post('/payment/webhook', [PaymentWebhookController::class, 'handlePaymentCallback'])
+      ->name('payment.webhook');

@@ -19,6 +19,7 @@ class Order extends Model
         'currency',
         'airalo_order_id',
         'order_data',
+        'reference_number',
     ];
 
     protected $casts = [

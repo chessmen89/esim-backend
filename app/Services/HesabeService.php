@@ -1,6 +1,5 @@
 <?php
 
-
 namespace App\Services;
 
 use Illuminate\Support\Facades\Config;
@@ -22,9 +21,7 @@ class HesabeService
         $this->accessCode   = Config::get('hesabe.access_code');
         $this->secretKey    = Config::get('hesabe.secret_key');
         $this->ivKey        = Config::get('hesabe.iv_key');
-
-        // Make sure BASE_URL is just the host (no trailing /checkout)
-        $this->baseUrl = rtrim(Config::get('hesabe.base_url'), '/');
+        $this->baseUrl      = rtrim(Config::get('hesabe.base_url'), '/');
 
         if (strlen($this->secretKey) !== 32) {
             throw new RuntimeException('HESABE_SECRET_KEY must be 32 characters');
@@ -88,53 +85,41 @@ class HesabeService
         return $this->unpad($dec);
     }
 
-  
     public function decryptCallback(string $cipherHex): array
     {
-        // 1) decrypt to raw JSON (might contain control chars)
         $json = $this->decrypt($cipherHex);
-
-        // 2) remove any stray control characters (except newlines & carriage returns)
         $json = preg_replace('/[^\x09\x0A\x0D\x20-\x7E]/', '', $json);
-
-        // 3) now decode with error checking
         $decoded = json_decode($json, true);
         if (json_last_error() !== JSON_ERROR_NONE) {
             throw new RuntimeException(
                 'Invalid callback JSON: ' . json_last_error_msg()
             );
         }
-
         return $decoded;
     }
 
-
-    /**
-     * Indirect integration:
-     * 1) POST /checkout → get encrypted token
-     * 2) redirect to /payment?data={token}
-     */
     public function initiatePayment(array $payload): string
     {
-        // build the raw payload exactly as in the kit
-        $body = [
-            'merchantCode'  => (string)$this->merchantCode,
-            'access_code'   => $this->accessCode,             // note snake_case per docs
-            'amount'        => number_format($payload['amount'], 3, '.', ''),
-            'currency'      => $payload['currency']    ?? 'KWD',
-            'responseUrl'   => $payload['responseUrl'] ?? route('hesabe.callback'),
-            'failureUrl'    => $payload['failureUrl']  ?? route('hesabe.failure'),
-            'paymentType'   => (string)($payload['paymentType'] ?? '0'),  // must be 0 for Indirect
-            'version'       => '2.0',
-            'merchantRefNo' => $payload['merchantRefNo'] ?? '',
-            'variable1'     => $payload['variable1'] ?? null,
-            'variable2'     => $payload['variable2'] ?? null,
-            'variable3'     => $payload['variable3'] ?? null,
-            'variable4'     => $payload['variable4'] ?? null,
-            'variable5'     => $payload['variable5'] ?? null,
-        ];
+       $body = [
+    'merchantCode'         => (string)$this->merchantCode,
+    'access_code'          => $this->accessCode,
+    'amount'               => number_format($payload['amount'], 3, '.', ''),
+    'currency'             => $payload['currency']    ?? 'KWD',
+    'responseUrl'          => $payload['responseUrl'] ?? route('hesabe.callback'),
+    'failureUrl'           => $payload['failureUrl']  ?? route('hesabe.failure'),
+    'paymentType'          => (string)($payload['paymentType'] ?? '0'),
+    'version'              => '2.0',
+    'merchantRefNo'        => $payload['reference_number'] ?? null,
+    'orderReferenceNumber' => $payload['reference_number'] ?? null,
+    'variable1'            => $payload['reference_number'] ?? null,
+    'variable2'            => $payload['variable2'] ?? null,
+    'variable3'            => $payload['variable3'] ?? null,
+    'variable4'            => $payload['variable4'] ?? null,
+    'variable5'            => $payload['variable5'] ?? null,
+];
+    Log::debug("Step 4 - initiatePayment called with Reference Number: {$payload['reference_number']}");
 
-        // 1️⃣ Encrypt & call /checkout
+
         $json = json_encode($body, JSON_UNESCAPED_SLASHES);
         $enc  = $this->encrypt($json);
 
@@ -145,7 +130,7 @@ class HesabeService
             ])
             ->post("{$this->baseUrl}/checkout", ['data' => $enc]);
 
-        if (! $response->successful()) {
+        if (!$response->successful()) {
             Log::error('Hesabe checkout HTTP error', [
                 'status' => $response->status(),
                 'body'   => $response->body(),
@@ -153,7 +138,6 @@ class HesabeService
             throw new RuntimeException('Hesabe checkout request failed');
         }
 
-        // 2️⃣ Decrypt response
         $decrypted = $this->decrypt(trim($response->body()));
         $dec       = json_decode($decrypted, true);
 
@@ -164,10 +148,6 @@ class HesabeService
 
         $token = $dec['response']['data'];
 
-        // 3️⃣ Build final redirect URL to payment page
         return "{$this->baseUrl}/payment?data={$token}";
-
-
     }
-    
 }

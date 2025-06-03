@@ -43,7 +43,7 @@ class PaymentController extends Controller
             'failureUrl'  => route('payment.verify'),
             'paymentType'   => '0',                                  // indirect card flow
             'version'       => '2.0',
-            'merchantRefNo' => $order->reference_number,
+            'orderReferenceNumber' => $order->reference_number,
         ];
                 Log::info('Checkout Payload:', $paymentData);
 
@@ -55,6 +55,7 @@ class PaymentController extends Controller
             'status'      => 'success',
             'payment_url' => $paymentUrl,
         ]);
+       
     }
  /**
      * POST /api/payment/verify
@@ -70,41 +71,24 @@ class PaymentController extends Controller
         Log::error('Hesabe callback decrypt failed', ['err' => $e->getMessage()]);
         return response()->json(['status'=>'error','message'=>'Invalid callback data'], 400);
     }
+    Log::debug("Step 5 - Callback received. Hesabe Reference Number: " . ($payload['response']['orderReferenceNumber'] ?? 'N/A'));
 
+    // Log payload before extracting orderRef, if not already logged above
     Log::debug('Hesabe callback payload', $payload);
 
-//     // grab the reference, preferring merchantRefNo
-//     $orderRef = $payload['response']['merchantRefNo']
-//           ?? $payload['response']['orderReferenceNumber']
-//           ?? null;
+    $orderRef = $payload['response']['variable1'] ?? null;
+    $orderRef = trim($orderRef);
 
-// if (! $orderRef) {
-//     Log::warning('Hesabe callback missing orderRef', $payload);
-//     return response()->json(['status'=>'error','message'=>'Missing order reference'], 400);
-// }
+  if (! $orderRef) {
+      Log::warning('Hesabe callback missing orderRef (tried merchantRefNo, orderReferenceNumber, orderReferenceNo, variable1)', $payload);
+      return response()->json(['status'=>'error','message'=>'Missing order reference'], 400);
+  }
 
-// 🔁 استخدام قيمة ثابتة مؤقتًا لغرض الاختبار
-$orderRef = 'ORD-21'; // <-- غيرها حسب الطلب اللي دفعته
-
-$order = Order::where('reference_number', $orderRef)->first();
-
-if (! $order) {
-    return response()->json(['status'=>'error','message'=>'Order not found'], 404);
-}
-
-// ✅ بدلاً من استخراج ID منه، استخدمه كما هو:
-$order = Order::where('reference_number', $orderRef)->first();
-
-if (! $order) {
-    return response()->json(['status'=>'error','message'=>'Order not found'], 404);
-}
-
-    // find the order
-    $orderId = (int) str_replace('ORD-', '', $orderRef);
-    $order   = Order::find($orderId);
-    if (! $order) {
-        return response()->json(['status'=>'error','message'=>'Order not found'], 404);
-    }
+  $order = Order::where('reference_number', $orderRef)->first();
+  if (! $order) {
+      Log::warning("Step 7 - Order not found for Reference: {$orderRef}");
+      return response()->json(['status'=>'error','message'=>'Order not found'], 404);
+  }
 
     // only “CAPTURED” is a success
     $ok         = ($payload['status'] ?? false) === true;
@@ -138,27 +122,31 @@ if (! $order) {
             'order_data'      => $airaloResp,
         ]);
     } catch (\Exception $e) {
-        Log::error("Airalo createOrder failed for order {$orderId}", ['err'=>$e->getMessage()]);
+        Log::error("Airalo createOrder failed for order {$order->id}", ['err'=>$e->getMessage()]);
         // you can decide how to handle this failure
     }
 
     // return exactly what the client expects
     return response()->json([
-        'message'  => $payload['message'],
-        'response' => [
-            'resultCode'           => $payload['response']['resultCode'],
-            'amount'               => $payload['response']['amount'],
-            'paymentToken'         => $payload['response']['paymentToken'],
-            'paymentId'            => $payload['response']['paymentId'],
-            'paidOn'               => $payload['response']['paidOn'],
-            'orderReferenceNumber' => $orderRef,
-            'auth'                 => $payload['response']['auth'],
-            'trackID'              => $payload['response']['trackID'],
-            'transactionId'        => $payload['response']['transactionId'],
-            'Id'                   => $payload['response']['Id'],
-            'bankReferenceId'      => $payload['response']['bankReferenceId'],
-        ],
-    ], 200);
+    'message'  => $payload['message'] ?? 'Payment response received.',
+    'response' => [
+        'resultCode'           => $payload['response']['resultCode']        ?? '',
+        'amount'               => $payload['response']['amount']            ?? '',
+        'paymentToken'         => $payload['response']['paymentToken']      ?? '',
+        'paymentId'            => $payload['response']['paymentId']         ?? '',
+        'paidOn'               => $payload['response']['paidOn']            ?? '',
+        'orderReferenceNumber' => $payload['response']['orderReferenceNumber']
+                                    ?? $payload['response']['merchantRefNo']
+                                    ?? $payload['response']['orderReferenceNo']
+                                    ?? $payload['response']['variable1']
+                                    ?? '',
+        'auth'                 => $payload['response']['auth']              ?? '',
+        'trackID'              => $payload['response']['trackID']           ?? '',
+        'transactionId'        => $payload['response']['transactionId']     ?? '',
+        'Id'                   => $payload['response']['Id']                ?? '',
+        'bankReferenceId'      => $payload['response']['bankReferenceId']   ?? '',
+    ],
+], 200);
 }
 
     /**

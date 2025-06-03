@@ -105,25 +105,26 @@ class OrderController extends Controller
      * GET  /api/orders
      * List all orders for the authenticated user.
      */
-    public function index(Request $request)
-    {
-        $user = $request->user();
-        if (! $user) {
-            return response()->json([
-                'status'  => 'error',
-                'message' => 'Unauthenticated.',
-            ], 401);
-        }
-
-        $orders = Order::where('user_id', $user->id)->get();
-
+   public function index(Request $request)
+{
+    $user = $request->user();
+    if (! $user) {
         return response()->json([
-            'status'  => 'success',
-            'message' => 'Orders retrieved successfully.',
-            'data'    => $orders,
-        ], 200);
+            'status'  => 'error',
+            'message' => 'Unauthenticated.',
+        ], 401);
     }
 
+    $orders = Order::where('user_id', $user->id)
+                   ->where('status', 'paid')
+                   ->get();
+
+    return response()->json([
+        'status'  => 'success',
+        'message' => 'Paid orders retrieved successfully.',
+        'data'    => $orders,
+    ], 200);
+}
     /**
      * GET  /api/orders/{id}
      * Retrieve a single order by ID (must belong to you).

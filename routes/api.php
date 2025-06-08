@@ -8,6 +8,8 @@ use App\Http\Controllers\OrderController;
 use App\Http\Controllers\PaymentWebhookController;
 use App\Http\Controllers\TripController;
 use App\Http\Controllers\Api\PaymentController;
+use App\Http\Controllers\SimUsageController;
+
 
 /*
 |--------------------------------------------------------------------------
@@ -87,3 +89,5 @@ Route::match(['get','post'], '/payment/callback', [PaymentController::class,'cal
      
 Route::post('/payment/webhook', [PaymentWebhookController::class, 'handlePaymentCallback'])
       ->name('payment.webhook');
+
+Route::get('/sim-usage/{iccid}', [SimUsageController::class, 'show']);

@@ -13,11 +13,11 @@ class Trip extends Model
 
     // جميع الحقول مطلوبة ولن تُقبل قيم فارغة
     protected $fillable = [
-        'name',
-        'pdf_path',
-        'image_path',
-        'country_code',
-        'price',
-        'description',
-    ];
+    'name',
+    'description',
+    'image_url',     // بدل image_path
+    'content_url',   // بدل pdf_path
+    'country_code',
+    'price',
+];
 }

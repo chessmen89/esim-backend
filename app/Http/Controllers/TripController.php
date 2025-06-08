@@ -78,24 +78,21 @@ class TripController extends Controller
      * @return \Illuminate\Http\JsonResponse
      */
     public function store(Request $request)
-    {
-        // التحقق من صحة البيانات المدخلة
-        $validatedData = $request->validate([
-            'name'         => 'required|string',
-            'pdf_path'     => 'required|string',
-            'image_path'   => 'required|string',
-            'country_code' => 'required|string|max:10',
-            'price'        => 'required|numeric',
-            'description'  => 'required|string',
-        ]);
+{
+    $validated = $request->validate([
+        'name'         => 'required|string|max:255',
+        'description'  => 'required|string',
+        'price'        => 'required|numeric|min:0',
+        'content_url'     => 'nullable|string',
+        'image_url'    => 'required|url',  // رابط مباشر لصورة
+        'country_code' => 'required|string|size:2',
+    ]);
 
-        // إنشاء سجل الباقة في قاعدة البيانات
-        $trip = Trip::create($validatedData);
+    $trip = Trip::create($validated);
 
-        return response()->json([
-            'status'  => 'success',
-            'message' => 'تم إنشاء الباقة بنجاح.',
-            'data'    => $trip
-        ], 201);
-    }
+    return response()->json([
+        'status' => 'success',
+        'data'   => $trip,
+    ]);
+}
 }

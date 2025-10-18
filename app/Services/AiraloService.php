@@ -59,7 +59,7 @@ class AiraloService
         }
 
         // Token endpoint (correct URL per documentation).
-        $tokenUrl = "https://sandbox-partners-api.airalo.com/v2/token";
+        $tokenUrl = "https://partners-api.airalo.com/v2/token";
 
         try {
             $response = Http::withHeaders([
